@@ -6,11 +6,11 @@ const { Pool } = require('pg');
 const cors = require('cors'); 
 
 
-// Middleware for parsing JSON and URL-encoded data
+
 router.use(bodyParser.json());
 router.use(bodyParser.urlencoded({ extended: true }));
 router.use(cors());
-// Set up file storage for multer
+// multer
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, 'uploads/');
@@ -22,7 +22,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-// Set up PostgreSQL connection pool
+// SQL
 const pool = new Pool({
     user: 'postgres',
     host: 'localhost',
@@ -30,7 +30,7 @@ const pool = new Pool({
     password: '@Naren2005VB',
     port: 5432,
   });
-// Route to handle form submission
+// Routes
 router.post('/submitForm', upload.fields([{ name: 'questionImage' }, { name: 'referenceModel' }]), async (req, res) => {
   const {
     id,
@@ -56,14 +56,14 @@ router.post('/submitForm', upload.fields([{ name: 'questionImage' }, { name: 're
 
   let newErrors = {};
 
-  // Validation based on contest type
+  
   
 
   if (Object.keys(newErrors).length > 0) {
     return res.status(400).json({ errors: newErrors });
   }
 
-  // Insert the common contest data into the `contests` table
+  
   const query = `
     INSERT INTO contests 
     (title, category, type, startDate, startTime, duration, access, participanttype, maxParticipants, softwareRequired, description)
@@ -87,7 +87,7 @@ router.post('/submitForm', upload.fields([{ name: 'questionImage' }, { name: 're
     const result = await pool.query(query, values);
     const contestId = result.rows[0].id;
 
-    // Now insert type-specific data based on the contest type
+    
     if (type === 'creative') {
       const creativeQuery = `
         INSERT INTO creative_contests (contest_id, problemStatement)
@@ -105,8 +105,7 @@ router.post('/submitForm', upload.fields([{ name: 'questionImage' }, { name: 're
     res.status(200).json({ message: 'Form data submitted successfully' });
   } catch (err) {
     console.error('Error inserting data:', err);
-
-            // Cleanup uploaded files on failure
+    //error hadiling
             deleteFile(questionImage);
             deleteFile(referenceModel);
 
