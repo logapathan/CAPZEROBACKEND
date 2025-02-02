@@ -1,6 +1,6 @@
 import env from "dotenv";
 import express from "express";
-import client from "pg";
+
 import bcrypt from "bcryptjs";
 import bodyparser from "body-parser";
 import cors from "cors";
@@ -85,65 +85,59 @@ app.post("/register", upload.single("profilePhoto"), async (req, res) => {
     const id = await pool.query("SELECT id FROM users WHERE username=$1", [
       name,
     ]);
+    if (req.file) {
+      //profile picture storage using aws bucket
+      const fileKey = `${Date.now()}-${path.basename(req.file.originalname)}`;
+      const params = {
+        Bucket: process.env.BUCKET_NAME,
+        Key: `ProfilePhoto/${fileKey}`,
+        Body: req.file.buffer,
+        ContentType: req.file.mimetype,
+        ACL: "public-read",
+      };
 
-    //profile picture storage using aws bucket
-    const fileKey = `${Date.now()}-${path.basename(req.file.originalname)}`;
-    const params = {
-      Bucket: process.env.BUCKET_NAME,
-      Key: `ProfilePhoto/${fileKey}`,
-      Body: req.file.buffer,
-      ContentType: req.file.mimetype,
-      ACL: "public-read", // Set appropriate ACL (e.g., public-read or private)
-    };
+      const data = await s3.send(new PutObjectCommand(params));
+      // res.json({
+      //   uploadstatus: true,
+      // });
 
-    const data = await s3.send(new PutObjectCommand(params));
-    // res.json({
-    //   uploadstatus: true,
-    // });
-
-    // console.log("Profile photo uploaded successfully:", data);
-    const fileUrl = `https://${process.env.BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/ProfilePhoto/${fileKey}`;
-    console.log(fileUrl);
-    // await pool.query(
-    //   `INSERT INTO "UserProfilePhoto" ("UserID","URL") SELECT id,$1 FROM users WHERE username=$2`,
-    //   fileUrl,
-    //   name
-    // );
+      const fileUrl = `https://${process.env.BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/ProfilePhoto/${fileKey}`;
+      console.log(fileUrl);
+      await pool.query(
+        `INSERT INTO "UserProfilePhoto" ("UserID","URL") SELECT id,$1 FROM users WHERE username=$2`,
+        fileUrl,
+        name
+      );
+    }
+    for (let i = 0; i < softwareExpertise.length; i++) {
+      try {
+        await pool.query(
+          `INSERT INTO "SoftwareExpertise" ("UserID","SoftwareID") SELECT id,$1 FROM users WHERE username=$2 `,
+          [software[softwareExpertise[i]], name]
+        );
+      } catch (error) {
+        res.json({ messgae: "Error in inserting software values" });
+      }
+    }
+    for (let i = 0; i < topicsOfInterest.length; i++) {
+      try {
+        await pool.query(
+          `INSERT INTO "TopicOfInterest" ("UserID","TopicID") SELECT id,$1 FROM users WHERE username=$2`,
+          [topicofoptions[topicsOfInterest[i]], name]
+        );
+      } catch (error) {
+        res.json({ messgae: "Error in inserting topic values" });
+      }
+    }
   } catch (error) {
-    console.log("fileupload");
-    console.log(error);
+    // console.log(error);
     return res.json({
-      uploadstatus: false,
+      message: "Upload failed",
+      pass: false,
     });
   }
 
-  for (let i = 0; i < softwareExpertise.length; i++) {
-    try {
-      await pool.query(
-        `INSERT INTO "SoftwareExpertise" ("UserID","SoftwareID") SELECT id,$1 FROM users WHERE username=$2 `,
-        [software[softwareExpertise[i]], name]
-      );
-    } catch (error) {
-      // res.json({ messgae: "Error in inserting software values" });
-      console.log("software");
-      console.log(error);
-    }
-  }
-  for (let i = 0; i < topicsOfInterest.length; i++) {
-    // console.log(topicofoptions[topicsOfInterest[i]]);
-    try {
-      await pool.query(
-        `INSERT INTO "TopicOfInterest" ("UserID","TopicID") SELECT id,$1 FROM users WHERE username=$2`,
-        [topicofoptions[topicsOfInterest[i]], name]
-      );
-    } catch (error) {
-      res.json({ messgae: "Error in inserting topic values" });
-      // console.log("topic");
-      // console.log(error);
-    }
-  }
-
-  return res.json({ messgae: "user registered sussfully" });
+  return res.json({ message: "user registered successfully", pass: true });
 });
 
 app.post("/login", async (req, res) => {
