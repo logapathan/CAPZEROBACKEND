@@ -103,11 +103,14 @@ app.post("/register", upload.single("profilePhoto"), async (req, res) => {
 
       const fileUrl = `https://${process.env.BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/ProfilePhoto/${fileKey}`;
       console.log(fileUrl);
-      await pool.query(
-        `INSERT INTO "UserProfilePhoto" ("UserID","URL") SELECT id,$1 FROM users WHERE username=$2`,
-        fileUrl,
-        name
-      );
+      try {
+        await pool.query(
+          `INSERT INTO "UserProfilePhoto" ("UserID","URL") SELECT id,$1 FROM users WHERE username=$2`,
+          [fileUrl, name]
+        );
+      } catch (error) {
+        console.log(error);
+      }
     }
     for (let i = 0; i < softwareExpertise.length; i++) {
       try {
