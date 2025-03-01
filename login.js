@@ -102,7 +102,7 @@ app.post("/register", upload.single("profilePhoto"), async (req, res) => {
       // });
 
       const fileUrl = `https://${process.env.BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/ProfilePhoto/${fileKey}`;
-      console.log(fileUrl);
+
       try {
         await pool.query(
           `INSERT INTO "UserProfilePhoto" ("UserID","URL") SELECT id,$1 FROM users WHERE username=$2`,
@@ -173,6 +173,25 @@ app.post("/login", async (req, res) => {
 // app.get("*", (req, res) => {
 //   res.sendFile(path.join(__dirname, "client/build", "index.html"));
 // });
+
+app.get("/fetchquestion/:id", async (req, res) => {
+  const id = parseInt(req.params.id);
+  const questions = await pool.query(
+    "SELECT * FROM practicequestions WHERE questionid=$1",
+    [id]
+  );
+  // console.log(questions.rows[0]);
+  const questionfile = await pool.query(
+    "SELECT questionurl FROM practicequestionsfiles WHERE questionid=$1",
+    [id]
+  );
+  if (!questions)
+    return res.status(404).json({ message: "Question not found" });
+  const response1 = { ...questions.rows[0], ...questionfile.rows[0] };
+  // console.log(response);
+
+  return res.json(response1);
+});
 
 app.listen(port, () => {
   console.log(`server running on port ${port}`);
